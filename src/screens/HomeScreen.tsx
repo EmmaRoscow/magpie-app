@@ -9,11 +9,11 @@ import {
 import { useDailyPoints } from '../hooks/useDailyPoints';
 
 const COLORS = {
-  background: '#4F46E5', // indigo-600
+  background: '#312E81', // indigo-900
   textPrimary: '#FFFFFF',
-  textMuted: '#C7D2FE',  // indigo-200
+  textMuted: '#A5B4FC',  // indigo-300
   button: '#FFFFFF',
-  buttonText: '#4F46E5', // indigo-600
+  buttonText: '#312E81', // indigo-900
 };
 
 export function HomeScreen() {
