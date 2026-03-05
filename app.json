@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Life App",
+    "slug": "life-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "platforms": ["android"],
+    "android": {
+      "package": "com.lifeapp.daily",
+      "adaptiveIcon": {
+        "backgroundColor": "#4F46E5"
+      }
+    },
+    "newArchEnabled": true
+  }
+}
