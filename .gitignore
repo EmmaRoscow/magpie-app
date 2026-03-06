@@ -21,3 +21,7 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# Temporary directories
+tmp/
+tmp2/
