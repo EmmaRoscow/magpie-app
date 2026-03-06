@@ -114,4 +114,36 @@ describe('useDailyPoints', () => {
 
     expect(result.current.points).toBe(0);
   });
+
+  it('saves a history snapshot to HISTORY when a reset occurs', async () => {
+    await AsyncStorage.setItem('DAILY_POINTS', '55');
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(12, 0, 0, 0);
+    const yesterdayISO = yesterday.toISOString();
+    await AsyncStorage.setItem('LAST_RESET_DATE', yesterdayISO);
+
+    const { result } = renderHook(() => useDailyPoints());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await waitFor(async () => {
+      const histRaw = await AsyncStorage.getItem('HISTORY');
+      expect(histRaw).not.toBeNull();
+      const hist = JSON.parse(histRaw!);
+      expect(hist).toHaveLength(1);
+      expect(hist[0].points).toBe(55);
+      expect(hist[0].periodStart).toBe(yesterdayISO);
+      expect(hist[0].periodEnd).toBeTruthy();
+    });
+  });
+
+  it('does not save a history snapshot when no previous reset date exists', async () => {
+    await AsyncStorage.clear();
+
+    const { result } = renderHook(() => useDailyPoints());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const histRaw = await AsyncStorage.getItem('HISTORY');
+    expect(histRaw).toBeNull();
+  });
 });

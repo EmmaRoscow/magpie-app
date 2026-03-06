@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { shouldReset } from '../utils/resetLogic';
+import { DaySnapshot } from '../types/history';
 
 const STORAGE_KEY_POINTS = 'DAILY_POINTS';
 const STORAGE_KEY_LAST_RESET = 'LAST_RESET_DATE';
+const STORAGE_KEY_HISTORY = 'HISTORY';
 
 export const DAILY_TARGET = 100;
 
@@ -35,6 +37,21 @@ export function useDailyPoints(): UseDailyPointsReturn {
 
       if (shouldReset(storedLastReset)) {
         const nowISO = new Date().toISOString();
+        if (rawLastReset !== null) {
+          const prevPoints = rawPoints !== null ? parseInt(rawPoints, 10) : 0;
+          const snapshot: DaySnapshot = {
+            periodStart: rawLastReset,
+            periodEnd: nowISO,
+            points: Number.isNaN(prevPoints) ? 0 : prevPoints,
+          };
+          try {
+            const histRaw = await AsyncStorage.getItem(STORAGE_KEY_HISTORY);
+            const hist: DaySnapshot[] = histRaw ? JSON.parse(histRaw) : [];
+            await AsyncStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify([snapshot, ...hist]));
+          } catch {
+            // don't prevent reset if history save fails
+          }
+        }
         await AsyncStorage.multiSet([
           [STORAGE_KEY_POINTS, '0'],
           [STORAGE_KEY_LAST_RESET, nowISO],
