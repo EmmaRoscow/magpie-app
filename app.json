@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "Life App",
-    "slug": "life-app",
+    "name": "Magpie App",
+    "slug": "magpie-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "platforms": ["android"],
     "android": {
-      "package": "com.lifeapp.daily",
+      "package": "com.magpieapp.daily",
       "adaptiveIcon": {
         "backgroundColor": "#4F46E5"
       }

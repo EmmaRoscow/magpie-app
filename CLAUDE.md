@@ -1,4 +1,4 @@
-# life-app
+# magpie-app
 
 A React Native / Expo daily points tracker for Android. Proof of concept for a future productivity app.
 
