@@ -2,22 +2,19 @@ import React from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { useDailyPoints } from '../hooks/useDailyPoints';
+import { useDailyPointsContext } from '../context/DailyPointsContext';
 
 const COLORS = {
   background: '#312E81', // indigo-900
   textPrimary: '#FFFFFF',
   textMuted: '#A5B4FC',  // indigo-300
-  button: '#FFFFFF',
-  buttonText: '#312E81', // indigo-900
 };
 
 export function HomeScreen() {
-  const { points, target, isLoading, increment } = useDailyPoints();
+  const { points, target, isLoading } = useDailyPointsContext();
 
   if (isLoading) {
     return (
@@ -38,17 +35,6 @@ export function HomeScreen() {
           </Text>
           <Text style={styles.target}>/ {target}</Text>
         </View>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={increment}
-          activeOpacity={0.8}
-          testID="increment-button"
-          accessibilityLabel="Add one point"
-          accessibilityRole="button"
-        >
-          <Text style={styles.buttonText}>+ 1 Point</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -76,7 +62,6 @@ const styles = StyleSheet.create({
   scoreRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    marginBottom: 48,
   },
   points: {
     fontSize: 96,
@@ -90,18 +75,5 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginBottom: 12,
     marginLeft: 8,
-  },
-  button: {
-    backgroundColor: COLORS.button,
-    paddingVertical: 16,
-    paddingHorizontal: 48,
-    borderRadius: 32,
-    elevation: 6,
-  },
-  buttonText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.buttonText,
-    letterSpacing: 0.5,
   },
 });

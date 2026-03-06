@@ -12,9 +12,7 @@ describe('useDailyPoints', () => {
 
   it('starts with 0 points when storage is empty', async () => {
     const { result } = renderHook(() => useDailyPoints());
-
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-
     expect(result.current.points).toBe(0);
     expect(result.current.target).toBe(100);
   });
@@ -24,7 +22,6 @@ describe('useDailyPoints', () => {
     await AsyncStorage.setItem('LAST_RESET_DATE', new Date().toISOString());
 
     const { result } = renderHook(() => useDailyPoints());
-
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.points).toBe(42);
@@ -38,39 +35,52 @@ describe('useDailyPoints', () => {
     await AsyncStorage.setItem('LAST_RESET_DATE', yesterday.toISOString());
 
     const { result } = renderHook(() => useDailyPoints());
-
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.points).toBe(0);
   });
 
-  it('increment increases points by 1', async () => {
+  it('adjustPoints increases points by the given delta', async () => {
     await AsyncStorage.setItem('LAST_RESET_DATE', new Date().toISOString());
 
     const { result } = renderHook(() => useDailyPoints());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     act(() => {
-      result.current.increment();
+      result.current.adjustPoints(5);
     });
 
-    expect(result.current.points).toBe(1);
+    expect(result.current.points).toBe(5);
   });
 
-  it('increment persists the new value to AsyncStorage', async () => {
+  it('adjustPoints decreases points with a negative delta', async () => {
+    await AsyncStorage.setItem('DAILY_POINTS', '10');
     await AsyncStorage.setItem('LAST_RESET_DATE', new Date().toISOString());
 
     const { result } = renderHook(() => useDailyPoints());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     act(() => {
-      result.current.increment();
-      result.current.increment();
+      result.current.adjustPoints(-3);
+    });
+
+    expect(result.current.points).toBe(7);
+  });
+
+  it('adjustPoints persists the new value to AsyncStorage', async () => {
+    await AsyncStorage.setItem('LAST_RESET_DATE', new Date().toISOString());
+
+    const { result } = renderHook(() => useDailyPoints());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.adjustPoints(2);
+      result.current.adjustPoints(3);
     });
 
     await waitFor(async () => {
       const stored = await AsyncStorage.getItem('DAILY_POINTS');
-      expect(stored).toBe('2');
+      expect(stored).toBe('5');
     });
   });
 
@@ -85,14 +95,23 @@ describe('useDailyPoints', () => {
     expect(result.current.isLoading).toBe(true);
   });
 
+  it('exposes lastResetISO after loading', async () => {
+    const resetDate = new Date().toISOString();
+    await AsyncStorage.setItem('LAST_RESET_DATE', resetDate);
+    await AsyncStorage.setItem('DAILY_POINTS', '0');
+
+    const { result } = renderHook(() => useDailyPoints());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.lastResetISO).toBe(resetDate);
+  });
+
   it('handles storage read errors gracefully', async () => {
     mockAsyncStorage.multiGet.mockRejectedValueOnce(new Error('Storage error'));
 
     const { result } = renderHook(() => useDailyPoints());
-
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    // Falls back to 0 on error
     expect(result.current.points).toBe(0);
   });
 });

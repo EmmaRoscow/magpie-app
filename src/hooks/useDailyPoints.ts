@@ -12,12 +12,14 @@ export interface UseDailyPointsReturn {
   points: number;
   target: number;
   isLoading: boolean;
-  increment: () => void;
+  lastResetISO: string;
+  adjustPoints: (delta: number) => void;
 }
 
 export function useDailyPoints(): UseDailyPointsReturn {
   const [points, setPoints] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [lastResetISO, setLastResetISO] = useState<string>(new Date(0).toISOString());
   const appState = useRef<AppStateStatus>(AppState.currentState);
 
   const loadAndMaybeReset = useCallback(async () => {
@@ -29,18 +31,20 @@ export function useDailyPoints(): UseDailyPointsReturn {
       const rawPoints = results[0][1];
       const rawLastReset = results[1][1];
 
-      // Treat a missing last-reset as epoch (always trigger a reset on first run)
-      const lastResetISO = rawLastReset ?? new Date(0).toISOString();
+      const storedLastReset = rawLastReset ?? new Date(0).toISOString();
 
-      if (shouldReset(lastResetISO)) {
+      if (shouldReset(storedLastReset)) {
+        const nowISO = new Date().toISOString();
         await AsyncStorage.multiSet([
           [STORAGE_KEY_POINTS, '0'],
-          [STORAGE_KEY_LAST_RESET, new Date().toISOString()],
+          [STORAGE_KEY_LAST_RESET, nowISO],
         ]);
         setPoints(0);
+        setLastResetISO(nowISO);
       } else {
         const parsed = rawPoints !== null ? parseInt(rawPoints, 10) : 0;
         setPoints(Number.isNaN(parsed) ? 0 : parsed);
+        setLastResetISO(storedLastReset);
       }
     } catch (error) {
       console.warn('useDailyPoints: storage read failed', error);
@@ -49,12 +53,10 @@ export function useDailyPoints(): UseDailyPointsReturn {
     }
   }, []);
 
-  // Load on mount
   useEffect(() => {
     loadAndMaybeReset();
   }, [loadAndMaybeReset]);
 
-  // Re-check reset when the app comes back to foreground (handles 3am crossover)
   useEffect(() => {
     const subscription = AppState.addEventListener(
       'change',
@@ -71,9 +73,9 @@ export function useDailyPoints(): UseDailyPointsReturn {
     return () => subscription.remove();
   }, [loadAndMaybeReset]);
 
-  const increment = useCallback(() => {
+  const adjustPoints = useCallback((delta: number) => {
     setPoints((prev) => {
-      const next = prev + 1;
+      const next = prev + delta;
       AsyncStorage.setItem(STORAGE_KEY_POINTS, String(next)).catch((err) =>
         console.warn('useDailyPoints: storage write failed', err)
       );
@@ -81,5 +83,5 @@ export function useDailyPoints(): UseDailyPointsReturn {
     });
   }, []);
 
-  return { points, target: DAILY_TARGET, isLoading, increment };
+  return { points, target: DAILY_TARGET, isLoading, lastResetISO, adjustPoints };
 }
