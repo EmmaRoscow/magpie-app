@@ -216,4 +216,58 @@ describe('useTasks', () => {
     expect(result.current.categories).toEqual(expect.arrayContaining(['Health', 'Work']));
     expect(result.current.categories).toHaveLength(2);
   });
+
+  it('reorderIncompleteTasks updates task ordering', async () => {
+    const stored = [
+      makeTask({ id: '1', name: 'First' }),
+      makeTask({ id: '2', name: 'Second' }),
+    ];
+    await AsyncStorage.setItem('TASKS', JSON.stringify(stored));
+    const { result } = renderHook(() => useTasks(adjustPoints, TODAY_RESET));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.reorderIncompleteTasks([
+        makeTask({ id: '2', name: 'Second' }),
+        makeTask({ id: '1', name: 'First' }),
+      ]);
+    });
+
+    expect(result.current.tasks[0].id).toBe('2');
+    expect(result.current.tasks[1].id).toBe('1');
+  });
+
+  it('setTaskCompletedAt updates the completedAt timestamp', async () => {
+    const stored = [makeTask({ id: '1', completedAt: AFTER_RESET })];
+    await AsyncStorage.setItem('TASKS', JSON.stringify(stored));
+    const { result } = renderHook(() => useTasks(adjustPoints, TODAY_RESET));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => { result.current.setTaskCompletedAt('1', BEFORE_RESET); });
+
+    expect(result.current.tasks[0].completedAt).toBe(BEFORE_RESET);
+  });
+
+  it('setTaskCompletedAt deducts points when moving from current to past period', async () => {
+    const stored = [makeTask({ id: '1', points: 5, completedAt: AFTER_RESET })];
+    await AsyncStorage.setItem('TASKS', JSON.stringify(stored));
+    const { result } = renderHook(() => useTasks(adjustPoints, TODAY_RESET));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => { result.current.setTaskCompletedAt('1', BEFORE_RESET); });
+
+    expect(adjustPoints).toHaveBeenCalledWith(-5);
+  });
+
+  it('setTaskCompletedAt does NOT deduct points when staying in current period', async () => {
+    const AFTER_RESET_2 = '2024-01-16T11:00:00.000Z';
+    const stored = [makeTask({ id: '1', points: 5, completedAt: AFTER_RESET })];
+    await AsyncStorage.setItem('TASKS', JSON.stringify(stored));
+    const { result } = renderHook(() => useTasks(adjustPoints, TODAY_RESET));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => { result.current.setTaskCompletedAt('1', AFTER_RESET_2); });
+
+    expect(adjustPoints).not.toHaveBeenCalled();
+  });
 });

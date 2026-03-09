@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DaySnapshot } from '../types/history';
 import { Task } from '../types/task';
@@ -10,6 +10,7 @@ export interface UseHistoryReturn {
   snapshots: DaySnapshot[];
   allTasks: Task[];
   isLoading: boolean;
+  refresh: () => void;
 }
 
 export function useHistory(): UseHistoryReturn {
@@ -17,23 +18,22 @@ export function useHistory(): UseHistoryReturn {
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [histRaw, tasksRaw] = await Promise.all([
-          AsyncStorage.getItem(HISTORY_KEY),
-          AsyncStorage.getItem(TASKS_KEY),
-        ]);
-        setSnapshots(histRaw ? JSON.parse(histRaw) : []);
-        setAllTasks(tasksRaw ? JSON.parse(tasksRaw) : []);
-      } catch {
-        // leave as empty arrays on error
-      } finally {
-        setIsLoading(false);
-      }
+  const load = useCallback(async () => {
+    try {
+      const [histRaw, tasksRaw] = await Promise.all([
+        AsyncStorage.getItem(HISTORY_KEY),
+        AsyncStorage.getItem(TASKS_KEY),
+      ]);
+      setSnapshots(histRaw ? JSON.parse(histRaw) : []);
+      setAllTasks(tasksRaw ? JSON.parse(tasksRaw) : []);
+    } catch {
+      // leave as empty arrays on error
+    } finally {
+      setIsLoading(false);
     }
-    load();
   }, []);
 
-  return { snapshots, allTasks, isLoading };
+  useEffect(() => { load(); }, [load]);
+
+  return { snapshots, allTasks, isLoading, refresh: load };
 }

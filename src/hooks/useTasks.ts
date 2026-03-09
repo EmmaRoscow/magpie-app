@@ -12,6 +12,8 @@ export interface UseTasksReturn {
   completeTask: (id: string) => void;
   uncompleteTask: (id: string) => void;
   deleteTask: (id: string) => void;
+  reorderIncompleteTasks: (newData: Task[]) => void;
+  setTaskCompletedAt: (id: string, completedAt: string) => void;
 }
 
 export function useTasks(
@@ -21,17 +23,13 @@ export function useTasks(
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Keep a ref in sync so callbacks always read fresh task data without
-  // becoming stale closures and without being recreated on every render.
   const tasksRef = useRef<Task[]>(tasks);
   tasksRef.current = tasks;
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY_TASKS)
       .then((raw) => {
-        if (raw) {
-          setTasks(JSON.parse(raw) as Task[]);
-        }
+        if (raw) setTasks(JSON.parse(raw) as Task[]);
       })
       .catch((err) => console.warn('useTasks: load failed', err))
       .finally(() => setIsLoading(false));
@@ -110,13 +108,45 @@ export function useTasks(
     [adjustPoints, lastResetISO, persist]
   );
 
+  // Replaces the incomplete tasks array with a new ordering (from drag-to-reorder).
+  const reorderIncompleteTasks = useCallback(
+    (newData: Task[]) => {
+      setTasks((prev) => {
+        const completed = prev.filter((t) => !!t.completedAt);
+        const next = [...newData, ...completed];
+        persist(next);
+        return next;
+      });
+    },
+    [persist]
+  );
+
+  // Backdates a completed task. Deducts points if moving it out of the current period.
+  const setTaskCompletedAt = useCallback(
+    (id: string, completedAt: string) => {
+      const task = tasksRef.current.find((t) => t.id === id);
+      if (!task || !task.completedAt) return;
+      if (task.completedAt > lastResetISO && completedAt <= lastResetISO) {
+        adjustPoints(-task.points);
+      }
+      setTasks((prev) => {
+        const next = prev.map((t) =>
+          t.id === id ? { ...t, completedAt } : t
+        );
+        persist(next);
+        return next;
+      });
+    },
+    [adjustPoints, lastResetISO, persist]
+  );
+
   const sortedTasks = useMemo(() => {
-    const incomplete = tasks
-      .filter((t) => !t.completedAt)
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    // Incomplete tasks keep their array order so drag-to-reorder is preserved.
+    const incomplete = tasks.filter((t) => !t.completedAt);
+    // Completed tasks: newest first.
     const complete = tasks
-      .filter((t) => t.completedAt)
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      .filter((t) => !!t.completedAt)
+      .sort((a, b) => b.completedAt!.localeCompare(a.completedAt!));
     return [...incomplete, ...complete];
   }, [tasks]);
 
@@ -133,5 +163,7 @@ export function useTasks(
     completeTask,
     uncompleteTask,
     deleteTask,
+    reorderIncompleteTasks,
+    setTaskCompletedAt,
   };
 }

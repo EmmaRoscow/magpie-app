@@ -18,6 +18,8 @@ const mockCompleteTask = jest.fn();
 const mockUncompleteTask = jest.fn();
 const mockDeleteTask = jest.fn();
 const mockAddTask = jest.fn();
+const mockReorderIncompleteTasks = jest.fn();
+const mockSetTaskCompletedAt = jest.fn();
 
 function mockTasks(tasks = []) {
   jest.spyOn(useTasksModule, 'useTasks').mockReturnValue({
@@ -28,6 +30,8 @@ function mockTasks(tasks = []) {
     completeTask: mockCompleteTask,
     uncompleteTask: mockUncompleteTask,
     deleteTask: mockDeleteTask,
+    reorderIncompleteTasks: mockReorderIncompleteTasks,
+    setTaskCompletedAt: mockSetTaskCompletedAt,
   });
 }
 
@@ -123,5 +127,16 @@ describe('TasksScreen', () => {
     render(<TasksScreen />);
     expect(screen.queryByTestId('task-list')).toBeNull();
     expect(screen.queryByTestId('fab-add')).toBeTruthy();
+  });
+
+  it('does not show tasks completed before lastResetISO', () => {
+    const pastTask = makeTask({
+      id: '99',
+      name: 'Old task',
+      completedAt: '2024-01-15T10:00:00.000Z',
+    });
+    mockTasks([pastTask]);
+    render(<TasksScreen />);
+    expect(screen.queryByText('Old task')).toBeNull();
   });
 });

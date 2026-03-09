@@ -5,7 +5,7 @@ import * as DailyPointsContextModule from '../src/context/DailyPointsContext';
 import * as useHistoryModule from '../src/hooks/useHistory';
 import { UseDailyPointsReturn } from '../src/hooks/useDailyPoints';
 
-const baseHistory = { snapshots: [], allTasks: [], isLoading: false };
+const baseHistory = { snapshots: [], allTasks: [], isLoading: false, refresh: jest.fn() };
 
 function mockContext(overrides: Partial<UseDailyPointsReturn> = {}) {
   jest.spyOn(DailyPointsContextModule, 'useDailyPointsContext').mockReturnValue({
@@ -58,12 +58,15 @@ describe('HomeScreen', () => {
     expect(screen.getByText('Today')).toBeTruthy();
   });
 
-  it('shows past day view with snapshot points after pressing back', () => {
+  it('shows task-derived points for a past day after pressing back', () => {
     const snapshots = [
       { periodStart: '2024-01-15T03:00:00.000Z', periodEnd: '2024-01-16T03:00:00.000Z', points: 47 },
     ];
-    mockHistory({ snapshots });
-    mockContext();
+    const allTasks = [
+      { id: '1', name: 'Big task', points: 47, createdAt: '2024-01-15T05:00:00.000Z', completedAt: '2024-01-15T10:00:00.000Z' },
+    ];
+    mockHistory({ snapshots, allTasks });
+    mockContext({ lastResetISO: '2024-01-16T03:00:00.000Z' });
     render(<HomeScreen />);
     fireEvent.press(screen.getByTestId('nav-back'));
     expect(screen.getByTestId('past-points-display')).toHaveTextContent('47');
@@ -74,7 +77,7 @@ describe('HomeScreen', () => {
       { periodStart: '2024-01-15T03:00:00.000Z', periodEnd: '2024-01-16T03:00:00.000Z', points: 10 },
     ];
     mockHistory({ snapshots });
-    mockContext({ points: 5 });
+    mockContext({ points: 5, lastResetISO: '2024-01-16T03:00:00.000Z' });
     render(<HomeScreen />);
     fireEvent.press(screen.getByTestId('nav-back'));
     fireEvent.press(screen.getByTestId('nav-today'));
@@ -95,9 +98,17 @@ describe('HomeScreen', () => {
       },
     ];
     mockHistory({ snapshots, allTasks });
-    mockContext();
+    mockContext({ lastResetISO: '2024-01-16T03:00:00.000Z' });
     render(<HomeScreen />);
     fireEvent.press(screen.getByTestId('nav-back'));
     expect(screen.getByText('Walk the dog')).toBeTruthy();
+  });
+
+  it('nav-back is disabled when no history exists', () => {
+    mockContext({ lastResetISO: new Date().toISOString() });
+    render(<HomeScreen />);
+    fireEvent.press(screen.getByTestId('nav-back'));
+    expect(screen.queryByTestId('past-points-display')).toBeNull();
+    expect(screen.getByTestId('points-display')).toBeTruthy();
   });
 });
