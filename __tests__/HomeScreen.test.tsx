@@ -5,6 +5,10 @@ import * as DailyPointsContextModule from '../src/context/DailyPointsContext';
 import * as useHistoryModule from '../src/hooks/useHistory';
 import { UseDailyPointsReturn } from '../src/hooks/useDailyPoints';
 
+
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: jest.fn(),
+}));
 const baseHistory = { snapshots: [], allTasks: [], isLoading: false, refresh: jest.fn() };
 
 function mockContext(overrides: Partial<UseDailyPointsReturn> = {}) {

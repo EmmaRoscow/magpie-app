@@ -10,8 +10,9 @@ A React Native / Expo daily points tracker for Android. Proof of concept for a f
 - TypeScript 5.8.x
 - React Navigation 7 (bottom tabs)
 - AsyncStorage for persistence
-- react-native-reanimated ^4.2.2 (required by DraggableFlatList)
-- react-native-gesture-handler ^2.30.0 (required by DraggableFlatList)
+- react-native-reanimated ~4.1.0 (required by DraggableFlatList; pinned to match Expo Go SDK 54)
+- react-native-gesture-handler ~2.28.0 (required by DraggableFlatList; pinned to match Expo Go SDK 54)
+- react-native-worklets 0.5.1 (peer dep of reanimated; pinned to match Expo Go SDK 54 native binary)
 - react-native-draggable-flatlist ^4.0.3 (drag-to-reorder incomplete tasks)
 - @react-native-community/datetimepicker ^8.6.0 (change completion date)
 - Jest + @testing-library/react-native for tests
@@ -118,8 +119,11 @@ Incomplete tasks maintain array order (drag-to-reorder preserved). Completed tas
 reorderIncompleteTasks(newData) splices the new ordering in front of completed tasks and persists.
 setTaskCompletedAt(id, completedAt) deducts points if the task moves from current to past period.
 
-useHistory reads HISTORY and TASKS in parallel from AsyncStorage on mount. It is used only
-by HomeScreen to power the swipeable day browser.
+useHistory reads HISTORY and TASKS in parallel from AsyncStorage on mount via a stable
+useCallback (load). It exposes refresh: load so callers can re-read without remounting.
+HomeScreen calls refresh() via useFocusEffect whenever the screen regains focus (skipping
+the initial mount via a hasMounted ref to avoid a double-read). This ensures that backdating
+a task on TasksScreen is immediately reflected when navigating back to HomeScreen.
 
 "Same period" check for point deduction: task.completedAt > lastResetISO
 (ISO string comparison is lexicographically equivalent to chronological order).

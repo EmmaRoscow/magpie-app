@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { renderHook, act, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useHistory } from '../src/hooks/useHistory';
 
@@ -70,5 +70,20 @@ describe('useHistory', () => {
 
     expect(result.current.snapshots).toHaveLength(0);
     expect(result.current.allTasks).toHaveLength(0);
+  });
+
+  it('refresh re-reads data from AsyncStorage', async () => {
+    const snap = { periodStart: '2024-01-15T03:00:00.000Z', periodEnd: '2024-01-16T03:00:00.000Z', points: 5 };
+    await AsyncStorage.setItem('HISTORY', JSON.stringify([snap]));
+
+    const { result } = renderHook(() => useHistory());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.snapshots).toHaveLength(1);
+
+    const snap2 = { periodStart: '2024-01-14T03:00:00.000Z', periodEnd: '2024-01-15T03:00:00.000Z', points: 3 };
+    await AsyncStorage.setItem('HISTORY', JSON.stringify([snap, snap2]));
+
+    act(() => { result.current.refresh(); });
+    await waitFor(() => expect(result.current.snapshots).toHaveLength(2));
   });
 });
